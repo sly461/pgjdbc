@@ -735,6 +735,12 @@ public enum PGProperty {
       "",
       "Factory class to instantiate factories for XML processing"),
 
+
+  ORACLE_COMPILE(
+      "oracle_compile",
+      "false",
+      "Adapt ORACLE type"),
+
   ;
 
   private final String name;

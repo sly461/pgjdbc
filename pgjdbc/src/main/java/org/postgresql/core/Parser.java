@@ -977,11 +977,13 @@ public class Parser {
    * @param serverVersion        server version
    * @param protocolVersion      protocol version
    * @param escapeSyntaxCallMode mode specifying whether JDBC escape call syntax is transformed into a CALL/SELECT statement
+   * @param oracleMode           whether Oracle compatibility mode is enabled
    * @return SQL in appropriate for given server format
    * @throws SQLException if given SQL is malformed
    */
   public static JdbcCallParseInfo modifyJdbcCall(String jdbcSql, boolean stdStrings,
-      int serverVersion, int protocolVersion, EscapeSyntaxCallMode escapeSyntaxCallMode) throws SQLException {
+      int serverVersion, int protocolVersion, EscapeSyntaxCallMode escapeSyntaxCallMode,
+      boolean oracleMode) throws SQLException {
     // Mini-parser for JDBC function-call syntax (only)
     // TODO: Merge with escape processing (and parameter parsing?) so we only parse each query once.
     // RE: frequently used statements are cached (see {@link org.postgresql.jdbc.PgConnection#borrowQuery}), so this "merge" is not that important.
@@ -1030,9 +1032,13 @@ public class Parser {
           }
           break;
 
-        case 3:  // Looking for = after ?, skipping whitespace
+        case 3:  // Looking for = or := (Oracle) after ?, skipping whitespace
           if (ch == '=') {
             ++i;
+            ++state;
+          } else if (oracleMode && ch == ':' && i + 1 < len && jdbcSql.charAt(i + 1) == '=') {
+            // Oracle compatibility: support := assignment operator
+            i += 2;  // Skip both ':' and '='
             ++state;
           } else if (Character.isWhitespace(ch)) {
             ++i;

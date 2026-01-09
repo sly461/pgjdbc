@@ -488,6 +488,13 @@ public interface QueryExecutor extends TypeTransferModeRegistry {
 
   EscapeSyntaxCallMode getEscapeSyntaxCallMode();
 
+  /**
+   * Returns whether this connection is in Oracle compatibility mode.
+   *
+   * @return true if Oracle compatibility mode is enabled
+   */
+  boolean isOracleMode();
+
   PreferQueryMode getPreferQueryMode();
 
   AutoSave getAutoSave();

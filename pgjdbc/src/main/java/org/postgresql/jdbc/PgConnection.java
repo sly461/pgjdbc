@@ -163,6 +163,12 @@ public class PgConnection implements BaseConnection {
    */
   private final boolean replicationConnection;
 
+  /**
+   * Oracle compatibility mode flag.
+   * When true, the driver uses Oracle-compatible implementations for Statement, PreparedStatement, etc.
+   */
+  private final boolean oracleMode;
+
   private final LruCache<FieldMetadata.Key, FieldMetadata> fieldMetadataCache;
 
   private final @Nullable String xmlFactoryFactoryClass;
@@ -211,6 +217,9 @@ public class PgConnection implements BaseConnection {
     this.creatingURL = url;
 
     this.readOnlyBehavior = getReadOnlyBehavior(PGProperty.READ_ONLY_MODE.get(info));
+
+    // Initialize Oracle compatibility mode
+    this.oracleMode = PGProperty.ORACLE_COMPILE.getBoolean(info);
 
     setDefaultFetchSize(PGProperty.DEFAULT_ROW_FETCH_SIZE.getInt(info));
 
@@ -807,6 +816,15 @@ public class PgConnection implements BaseConnection {
     return readOnly && readOnlyBehavior != ReadOnlyBehavior.ignore;
   }
 
+  /**
+   * Returns whether this connection is in Oracle compatibility mode.
+   *
+   * @return true if Oracle compatibility mode is enabled, false otherwise
+   */
+  public boolean isOracleMode() {
+    return oracleMode;
+  }
+
   @Override
   public void setAutoCommit(boolean autoCommit) throws SQLException {
     checkClosed();
@@ -1291,6 +1309,9 @@ public class PgConnection implements BaseConnection {
   public Statement createStatement(int resultSetType, int resultSetConcurrency,
       int resultSetHoldability) throws SQLException {
     checkClosed();
+    if (oracleMode) {
+      return new OracleStatement(this, resultSetType, resultSetConcurrency, resultSetHoldability);
+    }
     return new PgStatement(this, resultSetType, resultSetConcurrency, resultSetHoldability);
   }
 
@@ -1298,6 +1319,10 @@ public class PgConnection implements BaseConnection {
   public PreparedStatement prepareStatement(String sql, int resultSetType, int resultSetConcurrency,
       int resultSetHoldability) throws SQLException {
     checkClosed();
+    if (oracleMode) {
+      return new OraclePreparedStatement(this, sql, resultSetType, resultSetConcurrency,
+          resultSetHoldability);
+    }
     return new PgPreparedStatement(this, sql, resultSetType, resultSetConcurrency,
         resultSetHoldability);
   }
@@ -1306,6 +1331,10 @@ public class PgConnection implements BaseConnection {
   public CallableStatement prepareCall(String sql, int resultSetType, int resultSetConcurrency,
       int resultSetHoldability) throws SQLException {
     checkClosed();
+    if (oracleMode) {
+      return new OracleCallableStatement(this, sql, resultSetType, resultSetConcurrency,
+          resultSetHoldability);
+    }
     return new PgCallableStatement(this, sql, resultSetType, resultSetConcurrency,
         resultSetHoldability);
   }
@@ -1314,7 +1343,11 @@ public class PgConnection implements BaseConnection {
   public DatabaseMetaData getMetaData() throws SQLException {
     checkClosed();
     if (metadata == null) {
-      metadata = new PgDatabaseMetaData(this);
+      if (oracleMode) {
+        metadata = new OracleDatabaseMetaData(this);
+      } else {
+        metadata = new PgDatabaseMetaData(this);
+      }
     }
     return metadata;
   }
