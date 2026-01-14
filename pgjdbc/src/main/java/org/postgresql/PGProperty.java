@@ -293,6 +293,58 @@ public enum PGProperty {
       "If disabled hosts are connected in the given order. If enabled hosts are chosen randomly from the set of suitable candidates"),
 
   /**
+   * Specifies the load balancing strategy to use when {@code loadBalanceHosts} is enabled.
+   * <p>
+   * Supported values:
+   * <ul>
+   *   <li>{@code random} (default): Randomly shuffle hosts for each connection</li>
+   *   <li>{@code weightedRandom}: Select hosts with probability proportional to their weights
+   *       (requires {@code loadBalanceWeightFactor})</li>
+   *   <li>{@code roundRobin}: Cycle through hosts in order, distributing connections evenly</li>
+   * </ul>
+   * </p>
+   * This parameter is ignored if {@code loadBalanceHosts=false}.
+   */
+  LOAD_BALANCE_STRATEGY(
+      "loadBalanceStrategy",
+      "random",
+      "Specifies the load balancing strategy: random (default), weightedRandom, or roundRobin",
+      false,
+      new String[] {"random", "weightedRandom", "roundRobin"}),
+
+  /**
+   * Comma-separated list of weights for hosts when using {@code weightedRandom} strategy.
+   * <p>
+   * <b>Format:</b> {@code "weight1,weight2,weight3,..."}
+   * </p>
+   * <p>
+   * <b>Weight Rules:</b>
+   * <ul>
+   *   <li>Weights must be non-negative integers</li>
+   *   <li>Weight 0 means the host is only used as backup after all other hosts fail</li>
+   *   <li>If fewer weights than hosts, missing weights default to 1</li>
+   *   <li>Extra weights beyond the number of hosts are ignored</li>
+   * </ul>
+   * </p>
+   * <p>
+   * <b>Example:</b> {@code "3,1,2,0"} means:
+   * <ul>
+   *   <li>Host 1 has 3x probability (50%)</li>
+   *   <li>Host 2 has 1x probability (16.7%)</li>
+   *   <li>Host 3 has 2x probability (33.3%)</li>
+   *   <li>Host 4 is backup only (0%)</li>
+   * </ul>
+   * </p>
+   * <p>
+   * This parameter is only effective when {@code loadBalanceStrategy=weightedRandom}.
+   * </p>
+   */
+  LOAD_BALANCE_WEIGHT_FACTOR(
+      "loadBalanceWeightFactor",
+      null,
+      "Comma-separated weights for hosts when using weightedRandom load balancing strategy"),
+
+  /**
    * This property is no longer used by the driver and will be ignored.
    * Logging is configured via java.util.logging.
    */

@@ -8,8 +8,13 @@ package org.postgresql.hostchooser;
 import static java.util.Collections.shuffle;
 
 import org.postgresql.PGProperty;
+import org.postgresql.hostchooser.loadbalance.ClusterStateRegistry;
+import org.postgresql.hostchooser.loadbalance.LoadBalanceStrategy;
+import org.postgresql.hostchooser.loadbalance.LoadBalanceStrategyFactory;
 import org.postgresql.util.HostSpec;
 import org.postgresql.util.PSQLException;
+
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 import java.util.AbstractList;
 import java.util.ArrayList;
@@ -27,6 +32,8 @@ class MultiHostChooser implements HostChooser {
   private final HostRequirement targetServerType;
   private int hostRecheckTime;
   private boolean loadBalance;
+  private @Nullable LoadBalanceStrategy loadBalanceStrategy;
+  private @Nullable String clusterId;
 
   MultiHostChooser(HostSpec[] hostSpecs, HostRequirement targetServerType,
       Properties info) {
@@ -35,6 +42,16 @@ class MultiHostChooser implements HostChooser {
     try {
       hostRecheckTime = PGProperty.HOST_RECHECK_SECONDS.getInt(info) * 1000;
       loadBalance = PGProperty.LOAD_BALANCE_HOSTS.getBoolean(info);
+
+      // Initialize load balance strategy if enabled
+      if (loadBalance) {
+        this.loadBalanceStrategy = LoadBalanceStrategyFactory.createStrategy(info);
+        String strategyName = PGProperty.LOAD_BALANCE_STRATEGY.get(info);
+        if (strategyName == null || strategyName.trim().isEmpty()) {
+          strategyName = "random";
+        }
+        this.clusterId = ClusterStateRegistry.generateClusterId(hostSpecs, strategyName);
+      }
     } catch (PSQLException e) {
       throw new RuntimeException(e);
     }
@@ -46,9 +63,8 @@ class MultiHostChooser implements HostChooser {
     if (!res.hasNext()) {
       // In case all the candidate hosts are unavailable or do not match, try all the hosts just in case
       List<HostSpec> allHosts = Arrays.asList(hostSpecs);
-      if (loadBalance) {
-        allHosts = new ArrayList<HostSpec>(allHosts);
-        Collections.shuffle(allHosts);
+      if (loadBalance && loadBalanceStrategy != null) {
+        allHosts = loadBalanceStrategy.orderHosts(allHosts, clusterId);
       }
       res = withReqStatus(targetServerType, allHosts).iterator();
     }
@@ -87,9 +103,12 @@ class MultiHostChooser implements HostChooser {
   private List<CandidateHost> getCandidateHosts(HostRequirement hostRequirement) {
     List<HostSpec> candidates =
         GlobalHostStatusTracker.getCandidateHosts(hostSpecs, hostRequirement, hostRecheckTime);
-    if (loadBalance) {
-      shuffle(candidates);
+
+    // Apply load balancing strategy
+    if (loadBalance && loadBalanceStrategy != null) {
+      candidates = loadBalanceStrategy.orderHosts(candidates, clusterId);
     }
+
     return withReqStatus(hostRequirement, candidates);
   }
 
