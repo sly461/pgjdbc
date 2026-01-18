@@ -19,8 +19,6 @@ import java.util.List;
  * Load balancing strategies are applied after hosts have been filtered by
  * {@code GlobalHostStatusTracker} based on {@code targetServerType} and other criteria.
  * </p>
- *
- * @see org.postgresql.hostchooser.MultiHostChooser
  */
 public interface LoadBalanceStrategy {
 

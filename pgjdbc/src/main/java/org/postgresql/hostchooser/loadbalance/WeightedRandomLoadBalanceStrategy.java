@@ -26,7 +26,6 @@ import java.util.Random;
  *   <li><b>Missing weights:</b> Default to 1 (equal weight)</li>
  *   <li><b>Extra weights:</b> Silently ignored if more weights than hosts</li>
  * </ul>
- * </p>
  * <p>
  * <b>Example:</b>
  * <pre>
@@ -34,7 +33,6 @@ import java.util.Random;
  * Weights: [3, 1, 0]
  * Result: host1 has 75% chance, host2 has 25% chance, host3 is backup only
  * </pre>
- * </p>
  *
  * @see LoadBalanceStrategyFactory#parseWeights
  */
@@ -65,7 +63,6 @@ public class WeightedRandomLoadBalanceStrategy implements LoadBalanceStrategy {
    *   <li>Repeatedly select from weighted hosts based on probability distribution</li>
    *   <li>Append backup hosts at the end (shuffled)</li>
    * </ol>
-   * </p>
    * <p>
    * The cluster ID parameter is ignored as this strategy is stateless.
    * </p>

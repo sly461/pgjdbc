@@ -302,21 +302,19 @@ public enum PGProperty {
    *       (requires {@code loadBalanceWeightFactor})</li>
    *   <li>{@code roundRobin}: Cycle through hosts in order, distributing connections evenly</li>
    * </ul>
-   * </p>
    * This parameter is ignored if {@code loadBalanceHosts=false}.
    */
   LOAD_BALANCE_STRATEGY(
       "loadBalanceStrategy",
       "random",
-      "Specifies the load balancing strategy: random (default), weightedRandom, or roundRobin",
+      "Specifies the load balancing strategy: random (default), weightedRandom, roundRobin, or leastConn",
       false,
-      new String[] {"random", "weightedRandom", "roundRobin"}),
+      new String[] {"random", "weightedRandom", "roundRobin", "leastConn"}),
 
   /**
    * Comma-separated list of weights for hosts when using {@code weightedRandom} strategy.
    * <p>
    * <b>Format:</b> {@code "weight1,weight2,weight3,..."}
-   * </p>
    * <p>
    * <b>Weight Rules:</b>
    * <ul>
@@ -325,7 +323,6 @@ public enum PGProperty {
    *   <li>If fewer weights than hosts, missing weights default to 1</li>
    *   <li>Extra weights beyond the number of hosts are ignored</li>
    * </ul>
-   * </p>
    * <p>
    * <b>Example:</b> {@code "3,1,2,0"} means:
    * <ul>
@@ -334,15 +331,91 @@ public enum PGProperty {
    *   <li>Host 3 has 2x probability (33.3%)</li>
    *   <li>Host 4 is backup only (0%)</li>
    * </ul>
-   * </p>
    * <p>
    * This parameter is only effective when {@code loadBalanceStrategy=weightedRandom}.
-   * </p>
    */
   LOAD_BALANCE_WEIGHT_FACTOR(
       "loadBalanceWeightFactor",
       null,
       "Comma-separated weights for hosts when using weightedRandom load balancing strategy"),
+
+  /**
+   * Interval in seconds between heartbeat checks for leastConn load balancing strategy.
+   * <p>
+   * When using leastConn strategy, the driver periodically checks the availability of all nodes
+   * in the cluster. This parameter controls the interval between checks.
+   * </p>
+   * <p>
+   * Set to 0 to disable heartbeat checks. Default is 20 seconds.
+   * </p>
+   * <p>
+   * This parameter is only effective when {@code loadBalanceStrategy=leastConn}.
+   * </p>
+   */
+  HEARTBEAT_INTERVAL_SECONDS(
+      "heartbeatIntervalSeconds",
+      "20",
+      "Interval in seconds between heartbeat checks for leastConn strategy. Set to 0 to disable heartbeat."),
+
+  /**
+   * Maximum idle time in seconds before a connection can be closed during quick auto-rebalancing.
+   * <p>
+   * When a failed node recovers, the driver may close idle connections on other nodes to
+   * rebalance the load. This parameter specifies the minimum idle time required before
+   * a connection is eligible for closure.
+   * </p>
+   * <p>
+   * Default is 30 seconds.
+   * </p>
+   * <p>
+   * This parameter is only effective when {@code loadBalanceStrategy=leastConn} and
+   * {@code enableQuickAutoBalance=true}.
+   * </p>
+   */
+  MAX_IDLE_TIME_BEFORE_CLOSE(
+      "maxIdleTimeBeforeClose",
+      "30",
+      "Maximum idle time in seconds before a connection can be closed during quick auto-rebalancing"),
+
+  /**
+   * Minimum percentage (0-100) of connections to reserve during quick auto-balance.
+   * <p>
+   * When rebalancing connections after a node recovery, the driver will not close more than
+   * (100 - minReservedConnectionPercent)% of idle connections. This ensures a minimum number
+   * of connections remain available.
+   * </p>
+   * <p>
+   * For example, if set to 20, at least 20% of connections will be preserved during rebalancing.
+   * Default is 20.
+   * </p>
+   * <p>
+   * This parameter is only effective when {@code loadBalanceStrategy=leastConn} and
+   * {@code enableQuickAutoBalance=true}.
+   * </p>
+   */
+  MIN_RESERVED_CONNECTION_PERCENT(
+      "minReservedConnectionPercent",
+      "20",
+      "Minimum percentage (0-100) of connections to reserve per host during quick auto-balance"),
+
+  /**
+   * Enable quick auto-balance when nodes recover from failure.
+   * <p>
+   * When enabled, the driver will automatically close idle connections on overloaded nodes
+   * when a previously failed node recovers. This helps redistribute connections more evenly
+   * across all available nodes.
+   * </p>
+   * <p>
+   * Default is true when using leastConn strategy.
+   * </p>
+   * <p>
+   * This parameter is only effective when {@code loadBalanceStrategy=leastConn}.
+   * </p>
+   */
+  ENABLE_QUICK_AUTO_BALANCE(
+      "enableQuickAutoBalance",
+      "false",
+      "Enable quick auto-balance when nodes recover from failure (only effective with leastConn strategy)"),
 
   /**
    * This property is no longer used by the driver and will be ignored.

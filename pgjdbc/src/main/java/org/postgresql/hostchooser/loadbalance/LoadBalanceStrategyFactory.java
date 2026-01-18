@@ -26,8 +26,8 @@ import java.util.Properties;
  *   <li><b>random</b> (default): Randomly shuffle hosts</li>
  *   <li><b>weightedRandom</b>: Select hosts with probability proportional to weights</li>
  *   <li><b>roundRobin</b>: Cycle through hosts in order</li>
+ *   <li><b>leastConn</b>: Prioritize hosts with fewer active connections</li>
  * </ul>
- * </p>
  *
  * @see LoadBalanceStrategy
  * @see PGProperty#LOAD_BALANCE_STRATEGY
@@ -35,7 +35,7 @@ import java.util.Properties;
  */
 public class LoadBalanceStrategyFactory {
 
-  private static final ClusterStateRegistry CLUSTER_REGISTRY = ClusterStateRegistry.getInstance();
+  private static final ClusterManager CLUSTER_MANAGER = ClusterManager.getInstance();
 
   /**
    * Creates a LoadBalanceStrategy based on connection properties.
@@ -68,11 +68,15 @@ public class LoadBalanceStrategyFactory {
     }
 
     if ("roundRobin".equalsIgnoreCase(strategyName)) {
-      return new RoundRobinLoadBalanceStrategy(CLUSTER_REGISTRY);
+      return new RoundRobinLoadBalanceStrategy(CLUSTER_MANAGER);
+    }
+
+    if ("leastConn".equalsIgnoreCase(strategyName)) {
+      return new LeastConnLoadBalanceStrategy(CLUSTER_MANAGER);
     }
 
     throw new PSQLException(
-        GT.tr("Invalid loadBalanceStrategy value: {0}. Valid values are: random, weightedRandom, roundRobin",
+        GT.tr("Invalid loadBalanceStrategy value: {0}. Valid values are: random, weightedRandom, roundRobin, leastConn",
             strategyName),
         PSQLState.INVALID_PARAMETER_VALUE);
   }

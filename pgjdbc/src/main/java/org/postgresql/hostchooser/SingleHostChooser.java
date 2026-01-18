@@ -25,4 +25,10 @@ class SingleHostChooser implements HostChooser {
   public Iterator<CandidateHost> iterator() {
     return candidateHost.iterator();
   }
+
+  @Override
+  public String getClusterId() {
+    // Single host doesn't have a cluster ID
+    return null;
+  }
 }

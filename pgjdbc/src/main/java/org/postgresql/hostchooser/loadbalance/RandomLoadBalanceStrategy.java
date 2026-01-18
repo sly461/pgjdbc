@@ -25,9 +25,6 @@ import java.util.List;
  *   <li>Uniform distribution - all hosts have equal probability over time</li>
  *   <li>Thread-safe - creates a new list for each invocation</li>
  * </ul>
- * </p>
- *
- * @see MultiHostChooser
  */
 public class RandomLoadBalanceStrategy implements LoadBalanceStrategy {
 

@@ -3,7 +3,7 @@
  * See the LICENSE file in the project root for more information.
  */
 
-package org.postgresql.test.hostchooser;
+package org.postgresql.test.hostchooser.loadbalance;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
@@ -14,7 +14,7 @@ import org.postgresql.PGProperty;
 import org.postgresql.hostchooser.CandidateHost;
 import org.postgresql.hostchooser.HostChooserFactory;
 import org.postgresql.hostchooser.HostRequirement;
-import org.postgresql.hostchooser.loadbalance.ClusterStateRegistry;
+import org.postgresql.hostchooser.loadbalance.ClusterManager;
 import org.postgresql.util.HostSpec;
 
 import org.junit.Test;
@@ -270,8 +270,8 @@ public class LoadBalanceIntegrationTest {
     HostSpec[] hosts1 = {host1, host2, host3};
     HostSpec[] hosts2 = {host3, host1, host2}; // Different order
 
-    String id1 = ClusterStateRegistry.generateClusterId(hosts1, "roundRobin");
-    String id2 = ClusterStateRegistry.generateClusterId(hosts2, "roundRobin");
+    String id1 = ClusterManager.generateClusterId(hosts1, "roundRobin");
+    String id2 = ClusterManager.generateClusterId(hosts2, "roundRobin");
 
     assertEquals("Cluster IDs should be same regardless of host order", id1, id2);
   }
@@ -283,8 +283,8 @@ public class LoadBalanceIntegrationTest {
   public void testClusterIdStrategyDependent() {
     HostSpec[] hosts = {host1, host2, host3};
 
-    String id1 = ClusterStateRegistry.generateClusterId(hosts, "roundRobin");
-    String id2 = ClusterStateRegistry.generateClusterId(hosts, "random");
+    String id1 = ClusterManager.generateClusterId(hosts, "roundRobin");
+    String id2 = ClusterManager.generateClusterId(hosts, "random");
 
     assertNotEquals("Different strategies should have different cluster IDs", id1, id2);
   }

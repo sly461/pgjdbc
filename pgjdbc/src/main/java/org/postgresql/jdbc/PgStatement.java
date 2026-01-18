@@ -919,12 +919,17 @@ public class PgStatement implements Statement, BaseStatement {
       // Not in query, there's nothing to cancel
       return;
     }
+    // Update connection state for load balancing tracking
+    updateConnectionState(StatementCancelState.CANCELING);
+
     // Synchronize on connection to avoid spinning in killTimerTask
     synchronized (connection) {
       try {
         connection.cancelQuery();
       } finally {
         STATE_UPDATER.set(this, StatementCancelState.CANCELLED);
+        // Update connection state for load balancing tracking
+        updateConnectionState(StatementCancelState.CANCELLED);
         connection.notifyAll(); // wake-up killTimerTask
       }
     }
@@ -976,6 +981,9 @@ public class PgStatement implements Statement, BaseStatement {
 
     STATE_UPDATER.set(this, StatementCancelState.IN_QUERY);
 
+    // Update connection state for load balancing tracking
+    updateConnectionState(StatementCancelState.IN_QUERY);
+
     if (timeout == 0) {
       return;
     }
@@ -1026,6 +1034,8 @@ public class PgStatement implements Statement, BaseStatement {
     // It is believed that this case is very rare, so "additional cancel and wait below" would not
     // harm it.
     if (timerTaskIsClear && STATE_UPDATER.compareAndSet(this, StatementCancelState.IN_QUERY, StatementCancelState.IDLE)) {
+      // Update connection state for load balancing tracking
+      updateConnectionState(StatementCancelState.IDLE);
       return;
     }
 
@@ -1046,9 +1056,40 @@ public class PgStatement implements Statement, BaseStatement {
           interrupted = true;
         }
       }
+      // Update connection state for load balancing tracking
+      updateConnectionState(StatementCancelState.IDLE);
     }
     if (interrupted) {
       Thread.currentThread().interrupt();
+    }
+  }
+
+  /**
+   * Updates the connection state in the load balancing registry.
+   * <p>
+   * This method is called when the statement state changes to track connection activity
+   * for the leastConn load balancing strategy. It allows the load balancer to:
+   * <ul>
+   *   <li>Identify truly idle connections that can be safely closed</li>
+   *   <li>Avoid closing connections that are actively executing queries</li>
+   *   <li>Calculate accurate idle times based on actual query execution</li>
+   * </ul>
+   * </p>
+   *
+   * @param newState The new statement state
+   */
+  private void updateConnectionState(StatementCancelState newState) {
+    try {
+      if (connection instanceof PgConnection) {
+        PgConnection pgConn = (PgConnection) connection;
+        // Update connection state using the executor
+        // ClusterManager will look up the clusterId internally
+        org.postgresql.hostchooser.loadbalance.ClusterManager.getInstance()
+            .setConnectionState(pgConn.getQueryExecutor(), newState);
+      }
+    } catch (Exception e) {
+      // Ignore errors in state tracking - it's not critical for query execution
+      // The connection will still work, just without precise state tracking
     }
   }
 

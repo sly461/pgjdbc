@@ -3,7 +3,7 @@
  * See the LICENSE file in the project root for more information.
  */
 
-package org.postgresql.test.hostchooser;
+package org.postgresql.test.hostchooser.loadbalance;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
@@ -52,7 +52,7 @@ import java.util.Properties;
  * export PG_TEST_PASSWORD=your_password
  *
  * # 运行测试
- * ./gradlew :postgresql:test --tests "org.postgresql.test.hostchooser.LoadBalanceRealConnectionTest"
+ * ./gradlew :postgresql:test --tests "org.postgresql.test.hostchooser.loadbalance.LoadBalanceRealConnectionTest"
  * </pre>
  * </p>
  */

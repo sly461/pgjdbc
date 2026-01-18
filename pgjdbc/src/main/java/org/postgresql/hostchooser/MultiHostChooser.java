@@ -8,7 +8,7 @@ package org.postgresql.hostchooser;
 import static java.util.Collections.shuffle;
 
 import org.postgresql.PGProperty;
-import org.postgresql.hostchooser.loadbalance.ClusterStateRegistry;
+import org.postgresql.hostchooser.loadbalance.ClusterManager;
 import org.postgresql.hostchooser.loadbalance.LoadBalanceStrategy;
 import org.postgresql.hostchooser.loadbalance.LoadBalanceStrategyFactory;
 import org.postgresql.util.HostSpec;
@@ -50,11 +50,16 @@ class MultiHostChooser implements HostChooser {
         if (strategyName == null || strategyName.trim().isEmpty()) {
           strategyName = "random";
         }
-        this.clusterId = ClusterStateRegistry.generateClusterId(hostSpecs, strategyName);
+        this.clusterId = ClusterManager.generateClusterId(hostSpecs, strategyName);
       }
     } catch (PSQLException e) {
       throw new RuntimeException(e);
     }
+  }
+
+  @Override
+  public @Nullable String getClusterId() {
+    return clusterId;
   }
 
   @Override

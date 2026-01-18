@@ -24,6 +24,8 @@ import org.postgresql.hostchooser.HostChooser;
 import org.postgresql.hostchooser.HostChooserFactory;
 import org.postgresql.hostchooser.HostRequirement;
 import org.postgresql.hostchooser.HostStatus;
+import org.postgresql.hostchooser.loadbalance.ClusterManager;
+import org.postgresql.hostchooser.loadbalance.LeastConnHeartbeat;
 import org.postgresql.jdbc.GSSEncMode;
 import org.postgresql.jdbc.SslMode;
 import org.postgresql.plugin.AuthenticationRequestType;
@@ -205,12 +207,33 @@ public class ConnectionFactoryImpl extends ConnectionFactory {
 
     HostChooser hostChooser =
         HostChooserFactory.createHostChooser(hostSpecs, targetServerType, info);
+
+    // Get load balance strategy and cluster ID for pending count management
+    String loadBalanceStrategy = PGProperty.LOAD_BALANCE_STRATEGY.get(info);
+    String clusterId = hostChooser.getClusterId();
+    boolean isLeastConn = "leastConn".equalsIgnoreCase(loadBalanceStrategy) && clusterId != null;
+
     Iterator<CandidateHost> hostIter = hostChooser.iterator();
     Map<HostSpec, HostStatus> knownStates = new HashMap<HostSpec, HostStatus>();
+
+    // Track which host currently has pending count incremented
+    HostSpec currentPendingHost = null;
+
     while (hostIter.hasNext()) {
       CandidateHost candidateHost = hostIter.next();
       HostSpec hostSpec = candidateHost.hostSpec;
       LOGGER.log(Level.FINE, "Trying to establish a protocol version 3 connection to {0}", hostSpec);
+
+      // Pre-allocate this host before attempting connection (dynamic pre-allocation)
+      if (isLeastConn) {
+        // Release previous host's pending count if we're moving to a new host
+        if (currentPendingHost != null && !currentPendingHost.equals(hostSpec)) {
+          ClusterManager.getInstance().decrementPendingCount(clusterId, currentPendingHost);
+        }
+        // Increment pending count for the host we're about to try
+        ClusterManager.getInstance().incrementPendingCount(clusterId, hostSpec);
+        currentPendingHost = hostSpec;
+      }
 
       // Note: per-connect-attempt status map is used here instead of GlobalHostStatusTracker
       // for the case when "no good hosts" match (e.g. all the hosts are known as "connectfail")
@@ -303,6 +326,16 @@ public class ConnectionFactoryImpl extends ConnectionFactory {
 
         runInitialQueries(queryExecutor, info);
 
+        // Register connection for leastConn load balancing strategy
+        if (isLeastConn) {
+          ClusterManager.getInstance().registerConnection(clusterId, hostSpec, queryExecutor);
+          // Release pending count after successful connection
+          ClusterManager.getInstance().decrementPendingCount(clusterId, hostSpec);
+          currentPendingHost = null; // Clear since we released it
+          // Start heartbeat detection (uses reference counting internally)
+          LeastConnHeartbeat.getInstance().start(clusterId, info);
+        }
+
         // And we're done.
         return queryExecutor;
       } catch (ConnectException cex) {
@@ -316,6 +349,13 @@ public class ConnectionFactoryImpl extends ConnectionFactory {
           // still more addresses to try
           continue;
         }
+
+        // No more hosts to try - release pending count before throwing exception
+        if (isLeastConn && currentPendingHost != null) {
+          ClusterManager.getInstance().decrementPendingCount(clusterId, currentPendingHost);
+          currentPendingHost = null;
+        }
+
         throw new PSQLException(GT.tr(
             "Connection to {0} refused. Check that the hostname and port are correct and that the postmaster is accepting TCP/IP connections.",
             hostSpec), PSQLState.CONNECTION_UNABLE_TO_CONNECT, cex);
@@ -328,6 +368,13 @@ public class ConnectionFactoryImpl extends ConnectionFactory {
           // still more addresses to try
           continue;
         }
+
+        // No more hosts to try - release pending count before throwing exception
+        if (isLeastConn && currentPendingHost != null) {
+          ClusterManager.getInstance().decrementPendingCount(clusterId, currentPendingHost);
+          currentPendingHost = null;
+        }
+
         throw new PSQLException(GT.tr("The connection attempt failed."),
             PSQLState.CONNECTION_UNABLE_TO_CONNECT, ioe);
       } catch (SQLException se) {
@@ -339,9 +386,23 @@ public class ConnectionFactoryImpl extends ConnectionFactory {
           // still more addresses to try
           continue;
         }
+
+        // No more hosts to try - release pending count before throwing exception
+        if (isLeastConn && currentPendingHost != null) {
+          ClusterManager.getInstance().decrementPendingCount(clusterId, currentPendingHost);
+          currentPendingHost = null;
+        }
+
         throw se;
       }
     }
+
+    // No suitable host found - release pending count before throwing exception
+    if (isLeastConn && currentPendingHost != null) {
+      ClusterManager.getInstance().decrementPendingCount(clusterId, currentPendingHost);
+      currentPendingHost = null;
+    }
+
     throw new PSQLException(GT
         .tr("Could not find a server with specified targetServerType: {0}", targetServerType),
         PSQLState.CONNECTION_UNABLE_TO_CONNECT);

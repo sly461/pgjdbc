@@ -344,6 +344,7 @@ class PgCallableStatement extends PgPreparedStatement implements CallableStateme
    * @param type1 type 1
    * @param type2 type 2
    * @param getName getter name
+   * @return the call result object
    * @throws SQLException if something goes wrong
    */
   protected @Nullable Object checkIndex(@Positive int parameterIndex, int type1, int type2, String getName)

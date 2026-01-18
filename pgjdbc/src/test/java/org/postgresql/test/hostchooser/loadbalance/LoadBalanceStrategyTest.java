@@ -3,7 +3,7 @@
  * See the LICENSE file in the project root for more information.
  */
 
-package org.postgresql.test.hostchooser;
+package org.postgresql.test.hostchooser.loadbalance;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
@@ -11,7 +11,7 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import org.postgresql.PGProperty;
-import org.postgresql.hostchooser.loadbalance.ClusterStateRegistry;
+import org.postgresql.hostchooser.loadbalance.ClusterManager;
 import org.postgresql.hostchooser.loadbalance.LoadBalanceStrategy;
 import org.postgresql.hostchooser.loadbalance.LoadBalanceStrategyFactory;
 import org.postgresql.hostchooser.loadbalance.RandomLoadBalanceStrategy;
@@ -41,7 +41,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * <p>
  * Tests cover:
  * - Individual strategy implementations
- * - ClusterStateRegistry functionality
+ * - ClusterManager functionality
  * - LoadBalanceStrategyFactory
  * - Weight parsing and validation
  * - Thread safety
@@ -264,7 +264,7 @@ public class LoadBalanceStrategyTest {
 
   @Test
   public void testRoundRobinStrategy_sequentialOrdering() {
-    ClusterStateRegistry registry = ClusterStateRegistry.getInstance();
+    ClusterManager registry = ClusterManager.getInstance();
     LoadBalanceStrategy strategy = new RoundRobinLoadBalanceStrategy(registry);
     String testClusterId = "test-roundrobin-" + System.currentTimeMillis();
 
@@ -293,7 +293,7 @@ public class LoadBalanceStrategyTest {
 
   @Test
   public void testRoundRobinStrategy_differentClusters() {
-    ClusterStateRegistry registry = ClusterStateRegistry.getInstance();
+    ClusterManager registry = ClusterManager.getInstance();
     LoadBalanceStrategy strategy = new RoundRobinLoadBalanceStrategy(registry);
 
     String cluster1 = "cluster1-" + System.currentTimeMillis();
@@ -315,7 +315,7 @@ public class LoadBalanceStrategyTest {
 
   @Test
   public void testRoundRobinStrategy_threadSafety() throws InterruptedException {
-    ClusterStateRegistry registry = ClusterStateRegistry.getInstance();
+    ClusterManager registry = ClusterManager.getInstance();
     LoadBalanceStrategy strategy = new RoundRobinLoadBalanceStrategy(registry);
     String testClusterId = "test-threadsafe-" + System.currentTimeMillis();
 
@@ -360,7 +360,7 @@ public class LoadBalanceStrategyTest {
 
   @Test
   public void testRoundRobinStrategy_emptyList() {
-    ClusterStateRegistry registry = ClusterStateRegistry.getInstance();
+    ClusterManager registry = ClusterManager.getInstance();
     LoadBalanceStrategy strategy = new RoundRobinLoadBalanceStrategy(registry);
     List<HostSpec> result = strategy.orderHosts(new ArrayList<>(), clusterId);
     assertEquals("Empty list should remain empty", 0, result.size());
@@ -368,7 +368,7 @@ public class LoadBalanceStrategyTest {
 
   @Test
   public void testRoundRobinStrategy_singleHost() {
-    ClusterStateRegistry registry = ClusterStateRegistry.getInstance();
+    ClusterManager registry = ClusterManager.getInstance();
     LoadBalanceStrategy strategy = new RoundRobinLoadBalanceStrategy(registry);
     String testClusterId = "test-single-" + System.currentTimeMillis();
     List<HostSpec> singleHost = Arrays.asList(host1);
@@ -382,18 +382,18 @@ public class LoadBalanceStrategyTest {
   }
 
   // ============================================
-  // ClusterStateRegistry Tests
+  // ClusterManager Tests
   // ============================================
 
   @Test
-  public void testClusterStateRegistry_singleton() {
-    ClusterStateRegistry registry1 = ClusterStateRegistry.getInstance();
-    ClusterStateRegistry registry2 = ClusterStateRegistry.getInstance();
+  public void testClusterManager_singleton() {
+    ClusterManager registry1 = ClusterManager.getInstance();
+    ClusterManager registry2 = ClusterManager.getInstance();
     assertTrue("Should return same instance", registry1 == registry2);
   }
 
   @Test
-  public void testClusterStateRegistry_generateClusterId() {
+  public void testClusterManager_generateClusterId() {
     HostSpec[] hosts1 = {
         new HostSpec("host1", 5432),
         new HostSpec("host2", 5433),
@@ -406,26 +406,26 @@ public class LoadBalanceStrategyTest {
         new HostSpec("host2", 5433)
     };
 
-    String id1 = ClusterStateRegistry.generateClusterId(hosts1, "roundRobin");
-    String id2 = ClusterStateRegistry.generateClusterId(hosts2, "roundRobin");
+    String id1 = ClusterManager.generateClusterId(hosts1, "roundRobin");
+    String id2 = ClusterManager.generateClusterId(hosts2, "roundRobin");
 
     assertEquals("Cluster IDs should be same regardless of order", id1, id2);
     assertTrue("Cluster ID should contain strategy", id1.contains("roundRobin"));
   }
 
   @Test
-  public void testClusterStateRegistry_differentStrategiesDifferentIds() {
+  public void testClusterManager_differentStrategiesDifferentIds() {
     HostSpec[] hosts = {new HostSpec("host1", 5432), new HostSpec("host2", 5433)};
 
-    String id1 = ClusterStateRegistry.generateClusterId(hosts, "roundRobin");
-    String id2 = ClusterStateRegistry.generateClusterId(hosts, "random");
+    String id1 = ClusterManager.generateClusterId(hosts, "roundRobin");
+    String id2 = ClusterManager.generateClusterId(hosts, "random");
 
     assertTrue("Different strategies should have different IDs", !id1.equals(id2));
   }
 
   @Test
-  public void testClusterStateRegistry_counterIncrement() {
-    ClusterStateRegistry registry = ClusterStateRegistry.getInstance();
+  public void testClusterManager_counterIncrement() {
+    ClusterManager registry = ClusterManager.getInstance();
     String testClusterId = "test-counter-" + System.currentTimeMillis();
 
     int counter1 = registry.getAndIncrementCounter(testClusterId);
@@ -437,8 +437,8 @@ public class LoadBalanceStrategyTest {
   }
 
   @Test
-  public void testClusterStateRegistry_independentCounters() {
-    ClusterStateRegistry registry = ClusterStateRegistry.getInstance();
+  public void testClusterManager_independentCounters() {
+    ClusterManager registry = ClusterManager.getInstance();
     String cluster1 = "test-cluster1-" + System.currentTimeMillis();
     String cluster2 = "test-cluster2-" + System.currentTimeMillis();
 
