@@ -110,7 +110,7 @@ public class LeastConnPerformanceTest {
     System.out.println("========================================\n");
 
     int warmupCount = 50;
-    int testCount = 10;
+    int testCount = 150;
 
     // 测试 random 策略
     long randomLatency = measureConnectionCreationLatency("random", warmupCount, testCount);
@@ -219,7 +219,7 @@ public class LeastConnPerformanceTest {
     int connectionCount = 200;
 
     // 测试 random 策略
-    double randomCV = measureLoadBalancingEffectiveness("roundRobin", connectionCount);
+    double randomCV = measureLoadBalancingEffectiveness("random", connectionCount);
 
     // 清理连接
     closeAllConnections();

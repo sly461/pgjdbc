@@ -9,9 +9,12 @@ import org.postgresql.PGProperty;
 import org.postgresql.util.HostSpec;
 import org.postgresql.util.SharedTimer;
 
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.Set;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.ConcurrentHashMap;
@@ -169,8 +172,18 @@ public class LeastConnHeartbeat {
    * It checks the availability of all hosts in each cluster and
    * detects state changes to trigger quick auto-balance.
    * </p>
+   * <p>
+   * Optimization: Hosts are deduplicated across clusters to avoid redundant checks.
+   * Each unique host is checked only once per heartbeat cycle, and the result is
+   * shared across all clusters that contain that host.
+   * </p>
    */
   private void doHeartbeat() {
+    // Step 1: Collect all unique hosts across all clusters and build cluster-host mapping
+    Map<HostSpec, Properties> uniqueHostsMap = new HashMap<>();
+    Map<String, List<HostSpec>> clusterHostsMap = new HashMap<>();
+    Map<String, Map<HostSpec, Boolean>> clusterOldStatesMap = new HashMap<>();
+
     for (Map.Entry<String, Properties> entry : clusterProperties.entrySet()) {
       String clusterId = entry.getKey();
       Properties info = entry.getValue();
@@ -182,20 +195,55 @@ public class LeastConnHeartbeat {
           continue;
         }
 
+        // Store cluster-host mapping
+        clusterHostsMap.put(clusterId, hosts);
+
         // Get current states before checking
         Map<HostSpec, Boolean> oldStates = clusterManager.getHostStates(clusterId);
+        clusterOldStatesMap.put(clusterId, oldStates);
 
-        // Check availability of each host
+        // Collect unique hosts (use first encountered properties for each host)
         for (HostSpec host : hosts) {
-          boolean available = checkHostAvailable(host, info);
-          clusterManager.setHostAvailable(clusterId, host, available);
+          if (!uniqueHostsMap.containsKey(host)) {
+            uniqueHostsMap.put(host, info);
+          }
+        }
+      } catch (Exception e) {
+        LOGGER.log(Level.WARNING, "Error during heartbeat preparation for cluster " + clusterId, e);
+      }
+    }
+
+    // Step 2: Check availability of each unique host only once
+    Map<HostSpec, Boolean> hostAvailabilityMap = new HashMap<>();
+    for (Map.Entry<HostSpec, Properties> entry : uniqueHostsMap.entrySet()) {
+      HostSpec host = entry.getKey();
+      Properties info = entry.getValue();
+      boolean available = checkHostAvailable(host, info);
+      hostAvailabilityMap.put(host, available);
+    }
+
+    // Step 3: Update availability for all clusters and detect state changes
+    for (Map.Entry<String, List<HostSpec>> entry : clusterHostsMap.entrySet()) {
+      String clusterId = entry.getKey();
+      List<HostSpec> hosts = entry.getValue();
+
+      try {
+        // Update availability for each host in this cluster
+        for (HostSpec host : hosts) {
+          Boolean available = hostAvailabilityMap.get(host);
+          if (available != null) {
+            clusterManager.setHostAvailable(clusterId, host, available);
+          }
         }
 
         // Get new states after checking
         Map<HostSpec, Boolean> newStates = clusterManager.getHostStates(clusterId);
+        Map<HostSpec, Boolean> oldStates = clusterOldStatesMap.get(clusterId);
 
         // Detect state changes and trigger quick auto-balance if needed
-        detectStateChanges(clusterId, oldStates, newStates);
+        if (oldStates != null) {
+          detectStateChanges(clusterId, oldStates, newStates);
+        }
 
         // Clean up stale connections for this cluster
         int removed = clusterManager.cleanupStaleConnections(clusterId);
