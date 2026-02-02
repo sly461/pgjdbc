@@ -6,7 +6,6 @@
 package org.postgresql.test.hostchooser.loadbalance;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 import org.postgresql.PGProperty;

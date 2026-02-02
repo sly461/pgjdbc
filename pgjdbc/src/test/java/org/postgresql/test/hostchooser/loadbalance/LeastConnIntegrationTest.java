@@ -14,16 +14,13 @@ import org.postgresql.hostchooser.CandidateHost;
 import org.postgresql.hostchooser.HostChooser;
 import org.postgresql.hostchooser.HostChooserFactory;
 import org.postgresql.hostchooser.HostRequirement;
-import org.postgresql.hostchooser.loadbalance.ClusterManager;
 import org.postgresql.util.HostSpec;
 
 import org.junit.Before;
 import org.junit.Test;
 
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Properties;
-import java.util.Set;
 
 /**
  * Integration tests for leastConn load balancing strategy with MultiHostChooser.

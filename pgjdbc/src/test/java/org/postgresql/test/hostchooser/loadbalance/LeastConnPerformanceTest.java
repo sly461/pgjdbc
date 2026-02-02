@@ -7,7 +7,6 @@ package org.postgresql.test.hostchooser.loadbalance;
 
 import org.postgresql.PGProperty;
 import org.postgresql.hostchooser.loadbalance.ClusterManager;
-import org.postgresql.util.HostSpec;
 
 import org.junit.After;
 import org.junit.Before;
@@ -26,7 +25,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * 性能基准测试 - 评估 leastConn 负载均衡策略的性能影响.

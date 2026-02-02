@@ -1,13 +1,11 @@
 package org.postgresql.mytest;
 
+import static org.junit.Assert.assertTrue;
+
 import org.postgresql.PGProperty;
-import org.postgresql.test.hostchooser.loadbalance.LeastConnRealConnectionTest;
 
 import java.sql.*;
 import java.util.*;
-
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
 
 public class Test {
 

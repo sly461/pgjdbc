@@ -15,8 +15,6 @@ import org.junit.Assert;
 import org.junit.Ignore;
 import org.junit.Test;
 
-import org.postgresql.util.PSQLException;
-
 import java.sql.SQLException;
 import java.util.List;
 

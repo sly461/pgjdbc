@@ -418,6 +418,49 @@ public enum PGProperty {
       "Enable quick auto-balance when nodes recover from failure (only effective with leastConn strategy)"),
 
   /**
+   * Enable read-write splitting to route read operations to replica servers and write operations
+   * to the master server. When enabled, the driver will automatically detect the master server
+   * (or use the explicitly configured {@code writeDataSourceAddress}) and route SQL statements
+   * based on their type:
+   * <ul>
+   *   <li>SELECT statements are routed to replica servers using the configured load balancing strategy</li>
+   *   <li>INSERT/UPDATE/DELETE/DDL statements are routed to the master server</li>
+   *   <li>All statements within a transaction (autoCommit=false) are routed to the master server</li>
+   * </ul>
+   * <p>
+   * This feature requires the ShardingSphere SQL parser dependencies to be available at runtime:
+   * <ul>
+   *   <li>org.apache.shardingsphere:shardingsphere-sql-parser-engine:5.4.0</li>
+   *   <li>org.apache.shardingsphere:shardingsphere-sql-parser-postgresql:5.4.0</li>
+   * </ul>
+   * </p>
+   * <p>
+   * Default value is false.
+   * </p>
+   */
+  ENABLE_READ_WRITE_SPLITTING(
+      "enableReadWriteSplitting",
+      "false",
+      "Enable read-write splitting to route reads to replicas and writes to master"),
+
+  /**
+   * Explicitly specify the master server address when {@code enableReadWriteSplitting=true}.
+   * The format is {@code host:port} (e.g., {@code 192.168.1.10:5432}).
+   * <p>
+   * If not specified, the driver will automatically detect the master server by querying
+   * {@code show transaction_read_only} on each host. The server that returns {@code off}
+   * is considered the master.
+   * </p>
+   * <p>
+   * This parameter is only effective when {@code enableReadWriteSplitting=true}.
+   * </p>
+   */
+  WRITE_DATA_SOURCE_ADDRESS(
+      "writeDataSourceAddress",
+      null,
+      "Explicitly specify master address in format host:port (only effective with enableReadWriteSplitting)"),
+
+  /**
    * This property is no longer used by the driver and will be ignored.
    * Logging is configured via java.util.logging.
    */

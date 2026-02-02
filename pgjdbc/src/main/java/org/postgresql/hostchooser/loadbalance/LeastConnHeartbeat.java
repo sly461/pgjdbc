@@ -10,11 +10,9 @@ import org.postgresql.util.HostSpec;
 import org.postgresql.util.SharedTimer;
 
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
-import java.util.Set;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.ConcurrentHashMap;
@@ -294,6 +292,11 @@ public class LeastConnHeartbeat {
       // Remove load balance properties to avoid recursive heartbeat
       testProps.remove("loadBalanceStrategy");
       testProps.remove("loadBalanceHosts");
+
+      // Remove read-write splitting properties to avoid master detection on single host
+      testProps.remove("enableReadWriteSplitting");
+      testProps.remove("writeDataSourceAddress");
+      testProps.remove("readDataSourceAddress");
 
       // Create test connection
       conn = java.sql.DriverManager.getConnection(url, testProps);
@@ -622,4 +625,3 @@ public class LeastConnHeartbeat {
     }
   }
 }
-

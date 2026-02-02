@@ -397,6 +397,19 @@ public class Driver implements java.sql.Driver {
    * @throws SQLException if the connection could not be made
    */
   private static Connection makeConnection(String url, Properties props) throws SQLException {
+    // Check if read-write splitting is enabled
+    boolean enableReadWriteSplitting = PGProperty.ENABLE_READ_WRITE_SPLITTING.getBoolean(props);
+
+    if (enableReadWriteSplitting) {
+      // Check if ShardingSphere dependencies are available
+      org.postgresql.readwritesplitting.SqlParser.checkAvailable();
+
+      // Return read-write splitting connection
+      return new org.postgresql.readwritesplitting.ReadWriteSplittingConnection(
+          hostSpecs(props), props, url);
+    }
+
+    // Return normal connection
     return new PgConnection(hostSpecs(props), props, url);
   }
 
