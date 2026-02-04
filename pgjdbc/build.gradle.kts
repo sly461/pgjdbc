@@ -55,7 +55,14 @@ dependencies {
     shaded("com.ongres.scram:client")
 
     implementation("org.checkerframework:checker-qual")
+
+    // ShardingSphere SQL parser (optional dependency for advanced SQL parsing)
+    compileOnly("org.apache.shardingsphere:shardingsphere-sql-parser-engine")
+    compileOnly("org.apache.shardingsphere:shardingsphere-sql-parser-postgresql")
+
     testImplementation("se.jiderhamn:classloader-leak-test-framework")
+    testImplementation("org.apache.shardingsphere:shardingsphere-sql-parser-engine")
+    testImplementation("org.apache.shardingsphere:shardingsphere-sql-parser-postgresql")
 }
 
 val skipReplicationTests by props()

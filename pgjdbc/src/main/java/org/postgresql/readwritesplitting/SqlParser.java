@@ -121,6 +121,8 @@ public class SqlParser {
         return parseE(sql, pos, len);
       case 'v':
         return parseV(sql, pos, len);
+      case 'w':
+        return parseW(sql, pos, len);
       case '{':
         return parseJdbcEscape(sql, pos, len);
       default:
@@ -181,6 +183,10 @@ public class SqlParser {
     }
     if (matchKeyword(sql, pos, len, "DESCRIBE")) {
       return SqlType.DESCRIBE;
+    }
+    // DO block - anonymous PL/pgSQL code block
+    if (matchKeyword(sql, pos, len, "DO")) {
+      return SqlType.CALL;  // Treat DO blocks like procedure calls (routes to MASTER)
     }
     return SqlType.UNKNOWN;
   }
@@ -277,6 +283,20 @@ public class SqlParser {
   private static SqlType parseV(String sql, int pos, int len) {
     if (matchKeyword(sql, pos, len, "VACUUM")) {
       return SqlType.VACUUM;
+    }
+    return SqlType.UNKNOWN;
+  }
+
+  // Parse keywords starting with 'W' (WITH - CTE)
+  private static SqlType parseW(String sql, int pos, int len) {
+    if (matchKeyword(sql, pos, len, "WITH")) {
+      // CTE query - need to check what follows (SELECT, INSERT, UPDATE, DELETE)
+      // For simplicity, check if it contains FOR UPDATE/SHARE
+      if (containsForUpdateOrShare(sql, pos, len)) {
+        return SqlType.SELECT_FOR_UPDATE;
+      }
+      // Most CTEs are SELECT queries for reporting/analysis
+      return SqlType.SELECT;
     }
     return SqlType.UNKNOWN;
   }

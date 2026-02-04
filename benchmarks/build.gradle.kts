@@ -27,6 +27,9 @@ dependencies {
 //    jmhImplementation("org.codehaus.janino:commons-compiler")
     jmhImplementation("org.openjdk.jmh:jmh-core")
     jmhImplementation("org.openjdk.jmh:jmh-generator-annprocess")
+    // ShardingSphere SQL parser for benchmark comparison
+    jmhImplementation("org.apache.shardingsphere:shardingsphere-sql-parser-engine")
+    jmhImplementation("org.apache.shardingsphere:shardingsphere-sql-parser-postgresql")
 }
 
 // See https://github.com/melix/jmh-gradle-plugin

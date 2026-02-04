@@ -59,6 +59,8 @@ dependencies {
         apiv("org.slf4j:slf4j-api", "slf4j")
         apiv("org.slf4j:slf4j-log4j12", "slf4j")
         apiv("se.jiderhamn:classloader-leak-test-framework")
+        apiv("org.apache.shardingsphere:shardingsphere-sql-parser-engine", "shardingsphere")
+        apiv("org.apache.shardingsphere:shardingsphere-sql-parser-postgresql", "shardingsphere")
         runtimev("org.junit.jupiter:junit-jupiter-engine", "junit5")
         runtimev("org.junit.vintage:junit-vintage-engine", "junit5")
         runtimev("org.openjdk.jmh:jmh-core", "jmh")
