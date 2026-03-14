@@ -283,6 +283,22 @@ public class ClusterManager {
   // ==================== Cleanup ====================
 
   /**
+   * Forcibly aborts all connections on a specific host in a cluster.
+   * <p>
+   * Called when heartbeat detects that a host has failed, to release
+   * underlying sockets for half-open connections.
+   * </p>
+   *
+   * @param clusterId Unique cluster identifier
+   * @param host Host specification of the failed node
+   * @return The number of connections aborted
+   */
+  public int abortConnectionsOnHost(String clusterId, HostSpec host) {
+    Cluster cluster = getCluster(clusterId);
+    return cluster == null ? 0 : cluster.abortConnectionsOnHost(host);
+  }
+
+  /**
    * Cleans up stale connections for a specific cluster.
    *
    * @param clusterId Unique cluster identifier

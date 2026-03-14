@@ -414,14 +414,15 @@ public class LeastConnHeartbeat {
       triggerQuickAutoBalance(clusterId);
     }
 
-    // Clean up stale connections on failed hosts
-    // Note: We don't forcibly close connections, just clean up already-closed ones
-    // Active connections will fail naturally when the application tries to use them
+    // Abort all connections on failed hosts to release half-open sockets
     if (!failedHosts.isEmpty()) {
-      int cleaned = clusterManager.cleanupStaleConnections(clusterId);
-      if (cleaned > 0) {
-        LOGGER.log(Level.INFO, "Cleaned up {0} stale connections in cluster {1} after host failure",
-            new Object[]{cleaned, clusterId});
+      int aborted = 0;
+      for (HostSpec host : failedHosts) {
+        aborted += clusterManager.abortConnectionsOnHost(clusterId, host);
+      }
+      if (aborted > 0) {
+        LOGGER.log(Level.INFO, "Aborted {0} connections in cluster {1} on failed hosts {2}",
+            new Object[]{aborted, clusterId, failedHosts});
       }
     }
   }

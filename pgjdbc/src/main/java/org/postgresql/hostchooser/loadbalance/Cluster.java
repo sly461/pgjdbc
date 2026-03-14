@@ -309,6 +309,21 @@ public class Cluster {
   }
 
   /**
+   * Forcibly aborts all connections on a specific host.
+   * <p>
+   * Called when heartbeat detects that a host has failed, to release
+   * underlying sockets for half-open connections.
+   * </p>
+   *
+   * @param host The host specification
+   * @return The number of connections aborted
+   */
+  public int abortConnectionsOnHost(HostSpec host) {
+    DataNode node = nodes.get(host);
+    return node == null ? 0 : node.abortAllConnections();
+  }
+
+  /**
    * Cleans up stale connections for all nodes in this cluster.
    *
    * @return Total number of connections removed

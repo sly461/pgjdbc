@@ -115,6 +115,10 @@ public class DataNode {
     while (iter.hasNext()) {
       ConnectionInfo info = iter.next();
       if (!info.isValid()) {
+        QueryExecutor executor = info.getExecutor();
+        if (executor != null && !executor.isClosed()) {
+          executor.abort();
+        }
         iter.remove(); // Clean up invalid connection
       } else {
         count++;
@@ -215,6 +219,10 @@ public class DataNode {
     while (iter.hasNext()) {
       ConnectionInfo info = iter.next();
       if (!info.isValid()) {
+        QueryExecutor executor = info.getExecutor();
+        if (executor != null && !executor.isClosed()) {
+          executor.abort();
+        }
         iter.remove(); // Clean up invalid connection
       } else if (info.canBeClosed(maxIdleTimeMs)) {
         idleConnections.add(info);
@@ -236,12 +244,41 @@ public class DataNode {
     while (iter.hasNext()) {
       ConnectionInfo info = iter.next();
       if (!info.isValid()) {
+        QueryExecutor executor = info.getExecutor();
+        if (executor != null && !executor.isClosed()) {
+          executor.abort();
+        }
         iter.remove();
         removed++;
       }
     }
 
     return removed;
+  }
+
+  /**
+   * Forcibly aborts all connections on this node.
+   * <p>
+   * Uses {@code abort()} instead of {@code close()} because close sends a Terminate
+   * message which will fail or hang on a dead connection. This method is intended to
+   * be called when a node is detected as failed (e.g., by heartbeat).
+   * </p>
+   *
+   * @return The number of connections aborted
+   */
+  public int abortAllConnections() {
+    int aborted = 0;
+    Iterator<ConnectionInfo> iter = connections.iterator();
+    while (iter.hasNext()) {
+      ConnectionInfo info = iter.next();
+      QueryExecutor executor = info.getExecutor();
+      if (executor != null && !executor.isClosed()) {
+        executor.abort();
+        aborted++;
+      }
+      iter.remove();
+    }
+    return aborted;
   }
 
   @Override
